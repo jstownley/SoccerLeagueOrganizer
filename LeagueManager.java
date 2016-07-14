@@ -1,7 +1,6 @@
 import com.teamtreehouse.model.Player;
 import com.teamtreehouse.model.Players;
 import com.teamtreehouse.model.Team;
-import com.teamtreehouse.model.Teams;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -30,6 +29,8 @@ public class LeagueManager {
     mMenu.put("add", "Add a player to a team");
     mMenu.put("remove", "Remove a player from a team");
     mMenu.put("print", "Print the player roster for a team");
+    mMenu.put("team report", "Show the Balance Report for a team");
+    mMenu.put("league report", "Show a League Balance Report for the whole league");
     mMenu.put("quit", "Exit the league manager");
     
     String choice = null;
@@ -84,7 +85,7 @@ public class LeagueManager {
             break;
           
           case "remove":
-            // Show the existings and choose one whose roster we'll modify.  Then,
+            // Show the existing teams and choose one whose roster we'll modify.  Then,
             // show the player roster for that team.
             team = ChooseTeam();
             if (null == team) {
@@ -116,6 +117,32 @@ public class LeagueManager {
             roster = ShowPlayersForTeam(team);
             break;
           
+          case "team report":
+            // Show a list of teams, choose one, and then show the report for that team
+            team = ChooseTeam();
+            if (null == team) {
+              System.out.println("Cannot show team Balance Report until teams are created");
+              break;
+            }
+            ShowBalanceReportForTeam(team);
+            break;
+          
+          case "league report":
+            System.out.printf("%n%n *** League Balance Report *** %n%n");
+            // For each team, get the balance report and show the stats
+            for (Map.Entry<String, Team> thisTeam : mTeamMap.entrySet()) {
+              balanceReport = GetBalanceReportForTeam(thisTeam.getValue());
+              System.out.printf("Showing stats for %s: %n",thisTeam.getValue().toString());
+              
+              // Show the size of each group in the balance report
+              for (Map.Entry<String, List<Player>> thisEntry : balanceReport.entrySet()) {
+                System.out.printf("Number of players in group '%s': %d %n",
+                                  thisEntry.getKey(), thisEntry.getValue().size());
+              }
+              System.out.println("");
+            }
+            break;
+          
           case "quit":
             System.out.println("Exiting...");
             break;
@@ -141,17 +168,6 @@ public class LeagueManager {
   
   
   // PUBLIC METHODS //
-  public static Team ChooseTeam() throws IOException {
-    // Show the team names and prompt for a choice
-    String[] teamNameArray = ShowExistingTeams();
-    if (0 == teamNameArray.length) return null;
-    System.out.print("Choose a team: ");
-    String teamName = teamNameArray[ReadNumber()-1];
-    System.out.println("");
-    return mTeamMap.get(teamName);
-  }
-  
-  
   public static String PromptForChoice() throws IOException {
     System.out.printf("%nMenu options: %n");
     for (Map.Entry<String, String> option : mMenu.entrySet()) {
@@ -165,7 +181,21 @@ public class LeagueManager {
     return choice;
   }
   
-  public static String[] ShowExistingTeams() {
+  
+  
+  // PRIVATE METHODS //
+  private static Team ChooseTeam() throws IOException {
+    // Show the team names and prompt for a choice
+    String[] teamNameArray = ShowExistingTeams();
+    if (0 == teamNameArray.length) return null;
+    System.out.print("Choose a team: ");
+    String teamName = teamNameArray[ReadNumber()-1];
+    System.out.println("");
+    return mTeamMap.get(teamName);
+  }
+  
+  
+  private static String[] ShowExistingTeams() {
     if (0 == mTeamMap.size()) return new String[0];
     System.out.println("Existing teams: ");
     int count = 1;
@@ -178,38 +208,95 @@ public class LeagueManager {
     return teamNameArray;
   }
   
-  public static List<Player> ShowPlayersForTeam(Team team) {
+  
+  private static List<Player> ShowPlayersForTeam(Team team) {
     List<Player> roster = team.getRoster();
     System.out.printf("Team roster for the %s: %n",team.toString());
     ShowPlayerList(roster);
     return roster;
   }
   
-  public static void ShowPlayerList(List<Player> playerList) {
+  
+  private static Map<String, List<Player>> GetBalanceReportForTeam(Team team) {
+    Map<String, List<Player>> reportMap = new TreeMap<>();
+    List<Player> heightList = new ArrayList<>();
+    List<Player> expList = new ArrayList<>();
+    List<Player> newList = new ArrayList<>();
+    List<Player> roster = team.getRoster();
+    
+    // Populate the Balance Report map...
+    for ( Player player : roster) {
+      // ...using player height as a key...
+      int playerHeight = player.getHeightInInches();
+      String heightAsString = Integer.toString(playerHeight) + " inches";
+      if (reportMap.containsKey(heightAsString)) {
+        heightList = reportMap.get(heightAsString);
+        heightList.add(player);
+        reportMap.put(heightAsString, heightList);
+      }
+      else {
+        List<Player> newHeightList = new ArrayList<>();
+        newHeightList.add(player);
+        reportMap.put(heightAsString, newHeightList);
+      }
+      
+      // ...as well as previous experience
+      if (player.isPreviousExperience()) {
+        if (reportMap.containsKey("experienced")) {
+          expList = reportMap.get("experienced");
+          expList.add(player);
+          reportMap.put("experienced", expList);
+        }
+        else {
+          List<Player> newExpList = new ArrayList<>();
+          newExpList.add(player);
+          reportMap.put("experienced", newExpList);
+        }
+      }
+      else {
+        if (reportMap.containsKey("new")) {
+          newList = reportMap.get("new");
+          newList.add(player);
+          reportMap.put("new", newList);
+        }
+        else {
+          List<Player> newNewList = new ArrayList<>();
+          newNewList.add(player);
+          reportMap.put("new", newNewList);
+        }
+      }
+    }
+    return reportMap;
+  }
+  
+  
+  private static void ShowBalanceReportForTeam(Team team) {
+    // Get the balance report...
+    Map<String, List<Player>> report = GetBalanceReportForTeam(team);
+    
+    // ...and show the Balance Report
+    System.out.printf("Balance Report roster for the %s: %n%n",team.toString());
+    for (Map.Entry<String,List<Player>> thisEntry : report.entrySet()) {
+      System.out.printf("Showing players for group: %s %n",thisEntry.getKey());
+      ShowPlayerList(thisEntry.getValue());
+    }
+  }
+  
+  
+  private static void ShowPlayerList(List<Player> playerList) {
     int count = 1;
     for (Player player : playerList) {
-      String experienceString;
-      if (player.isPreviousExperience()) {
-        experienceString = "previous experience";
-      } else {
-        experienceString = "new player";
-      }
-      System.out.printf("%d. %s, %s, %d\", %s %n", 
-                        count,
-                        player.getLastName(),
-                        player.getFirstName(),
-                        player.getHeightInInches(),
-                        experienceString);
+      System.out.printf("%d. %s %n", count, player.toString());
       count++;
     }
     System.out.println("");
   }
   
   
-  // PRIVATE METHODS //
   private static String ReadString() throws IOException {
     return mReader.readLine().trim();
   }
+  
   
   private static int ReadNumber() throws IOException {
     String numberAsString = ReadString();

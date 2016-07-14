@@ -54,10 +54,5 @@ public class Players {
     });
     return players;
   }
-  
-  /*@Override
-  public static void sort(List<Player> playerList) {
-    
-  }*/
 
 }
