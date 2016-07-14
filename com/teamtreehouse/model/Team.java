@@ -1,6 +1,8 @@
 package com.teamtreehouse.model;
 
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 
 public class Team {
@@ -12,12 +14,6 @@ public class Team {
     mTeamName = teamName;
     mCoach = coach;
     mRoster = new ArrayList<Player>();
-    
-    // TEST CODE! REMOVE THIS FOR FINAL VERSION
-    Player[] players = Players.load();
-    for (Player player : players) {
-      mRoster.add(player);
-    }
   }
   
   public String getTeamName() {
@@ -33,6 +29,15 @@ public class Team {
   }
   
   public void setRoster(List<Player> roster) {
+    Collections.sort(roster, new Comparator<Player>() {
+      
+      @Override
+      public int compare(Player player1, Player player2) {
+        if (player1.equals(player2)) return 0;
+        return player1.compareTo(player2);
+      }
+            
+    });
     mRoster = roster;
   }
   
